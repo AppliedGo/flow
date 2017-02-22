@@ -23,11 +23,11 @@ title = ""
 description = ""
 author = "Christoph Berger"
 email = "chris@appliedgo.net"
-date = "2017-00-00"
-publishdate = "2017-00-00"
+date = "2017-02-24"
+publishdate = "2017-02-24"
 draft = "true"
-domains = [""]
-tags = ["", "", ""]
+domains = ["Concurrent Programming"]
+tags = ["fbp", "flow-based programming", "dataflow"]
 categories = ["Tutorial"]
 +++
 
