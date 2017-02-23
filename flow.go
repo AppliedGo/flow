@@ -41,7 +41,75 @@ categories = ["Tutorial"]
 */
 
 // ## Imports and globals
+
 package main
+
+import (
+	"fmt"
+	"strings"
+
+	"github.com/trustmaster/goflow"
+)
+
+// A component that generates greetings
+type Counter struct {
+	flow.Component               // component "superclass" embedded
+	Sentence       <-chan string // input port
+	Count          chan<- int    // output port
+}
+
+// Reaction to a new sentence input
+func (c *Counter) OnSentence(sentence string) {
+	c.Count <- len(strings.Split(sentence, " "))
+}
+
+// A component that prints its input on screen
+type Printer struct {
+	flow.Component
+	Line <-chan int // inport
+}
+
+// Prints a line when it gets it
+func (p *Printer) OnCount(count int) {
+	fmt.Printf("%d\n", count)
+}
+
+// Our counter network
+type CounterApp struct {
+	flow.Graph // graph "superclass" embedded
+}
+
+// Graph constructor and structure definition
+func NewCounterApp() *CounterApp {
+	n := new(CounterApp) // creates the object in heap
+	n.InitGraphState()   // allocates memory for the graph
+	// Add processes to the network
+	n.Add(new(Counter), "counter")
+	n.Add(new(Printer), "printer")
+	// Connect them with a channel
+	n.Connect("counter", "Count", "printer", "Line")
+	// Our net has 1 inport mapped to counter.Sentence
+	n.MapInPort("In", "Counter", "Sentence")
+	return n
+}
+
+func main() {
+	// Create the network
+	net := NewGreetingApp()
+	// We need a channel to talk to it
+	in := make(chan string)
+	net.SetInPort("In", in)
+	// Run the net
+	flow.RunNet(net)
+	// Now we can send some names and see what happens
+	in <- "John"
+	in <- "Boris"
+	in <- "Hanna"
+	// Close the input to shut the network down
+	close(in)
+	// Wait until the app has done its job
+	<-net.Wait()
+}
 
 /*
 ## How to get and run the code
