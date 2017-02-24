@@ -132,8 +132,14 @@ import (
 	"github.com/trustmaster/goflow"
 )
 
+// Our two counters send their results asynchronously to the printer. To distinguish between the outputs of the two counters, we send a name along with the count. (Yes, sending just a string would be easier but also more boring.)
+type count struct {
+	kind  string
+	count int
+}
+
 // Splitter receives strings and copies each one to its two output ports.
-type Splitter struct {
+type splitter struct {
 	flow.Component
 
 	In         <-chan string
@@ -141,63 +147,63 @@ type Splitter struct {
 }
 
 // OnIn dispatches the input string to the two output ports.
-func (t *Splitter) OnIn(s string) {
+func (t *splitter) OnIn(s string) {
 	t.Out1 <- s
 	t.Out2 <- s
 }
 
 // WordCounter is a `goflow` component that counts the words in a string.
-type WordCounter struct {
+type wordCounter struct {
 	// Embed flow functionality.
 	flow.Component
 	// The input port receives strings that (should) contain words.
 	Sentence <-chan string
 	// The output port sends the word count as integers.
-	Count chan<- int
+	Count chan<- *count
 }
 
 // OnSentence triggers on new input from the `Sentence` port.
 // It counts the number of words in the sentence.
-func (wc *WordCounter) OnSentence(sentence string) {
-	wc.Count <- len(strings.Split(sentence, " "))
+func (wc *wordCounter) OnSentence(sentence string) {
+	wc.Count <- &count{"Words", len(strings.Split(sentence, " "))}
 }
 
 // LetterCounter is a `goflow` component that counts the letters in a string.
-type LetterCounter struct {
+type letterCounter struct {
 	flow.Component
 	Sentence <-chan string
 	// The output port sends the letter count as integers.
-	Count chan<- int
+	Count chan<- *count
 	// To identify letters, we use a simple regular expression.
 	re *regexp.Regexp
 }
 
 // OnSentence triggers on new input from the `Sentence` port.
 // It counts the number of words in the sentence.
-func (lc *LetterCounter) OnSentence(sentence string) {
-	lc.Count <- len(lc.re.FindAllString(sentence, -1))
+func (lc *letterCounter) OnSentence(sentence string) {
+	lc.Count <- &count{"Letters", len(lc.re.FindAllString(sentence, -1))}
 }
 
 // An Init method allows to initialize a component. Here we use it to run
 // the expensive MustCompile method once, rather than every time OnSentence is called.
-func (lc *LetterCounter) Init() {
+func (lc *letterCounter) Init() {
 	lc.re = regexp.MustCompile("[a-zA-Z]")
 }
 
 // Printer is a "sink" with no output. It prints the input
 // to the standard output.
-type Printer struct {
+type printer struct {
 	flow.Component
-	Line <-chan int // inport
+	Line <-chan *count // inport
 }
 
-// On count prints a count.
-func (p *Printer) OnCount(count int) {
-	fmt.Println("%s\n")
+// OnLine prints a count.
+func (p *printer) OnLine(c *count) {
+	fmt.Println(c.kind+":", c.count)
 }
 
 // CounterNet represents the complete network of nodes and data pipelines.
-type CounterNet struct {
+type counterNet struct {
 	flow.Graph
 }
 
@@ -210,23 +216,23 @@ With the nodes in place, we can go foward and create the complete network, addin
 */
 
 // Construct the network graph.
-func NewCounterNet() *CounterNet {
-	n := &CounterNet{}
+func NewCounterNet() *counterNet {
+	n := &counterNet{}
 	// Initialize the net.
 	n.InitGraphState()
 	// Add nodes to the net. (I derived from the documentation by using `&{}`
 	// instead of `new`.) Each node gets a name assigned that is used later
 	// when connecting the nodes.
-	n.Add(&Splitter{}, "splitter")
-	n.Add(&WordCounter{}, "wordcounter")
-	n.Add(&LetterCounter{}, "lettercounter")
-	n.Add(&Printer{}, "printer")
+	n.Add(&splitter{}, "splitter")
+	n.Add(&wordCounter{}, "wordCounter")
+	n.Add(&letterCounter{}, "letterCounter")
+	n.Add(&printer{}, "printer")
 	// Connect the nodes. The parameters are: Sending node, sending port,
 	// receiving node, and receiving port.
-	n.Connect("splitter", "Out1", "wordcounter", "Sentence")
-	n.Connect("splitter", "Out2", "lettercounter", "Sentence")
-	n.Connect("wordcounter", "Count", "printer", "Line")
-	n.Connect("lettercounter", "Count", "printer", "Line")
+	n.Connect("splitter", "Out1", "wordCounter", "Sentence")
+	n.Connect("splitter", "Out2", "letterCounter", "Sentence")
+	n.Connect("wordCounter", "Count", "printer", "Line")
+	n.Connect("letterCounter", "Count", "printer", "Line")
 	// Our net has 1 input port mapped to `splitter.In`.
 	n.MapInPort("In", "splitter", "In")
 	return n
@@ -253,7 +259,7 @@ func main() {
 	// text to the input channel. (All aphorisms by Oscar Wilde.)
 	in <- "I never put off till tomorrow what I can do the day after."
 	in <- "Fashion is a form of ugliness so intolerable that we have to alter it every six months."
-	in <- "Life is too important to be taken seriously. "
+	in <- "Life is too important to be taken seriously."
 	// Closing the input channel shuts the network down.
 	close(in)
 	// Wait until the network has shut down.
@@ -275,12 +281,27 @@ Step 3. Run the binary.
 
     go run ./flow
 
+The output should look like:
+
+```
+Letters: 45
+Words: 17
+Words: 13
+Letters: 36
+Words: 8
+Letters: 70
+```
+
+The unordered output shows that the nodes are indeed running asynchronously.
+
 
 ## Conclusions
 
-Apparently, the resulting code is far from representing an intuitive view on the flow of data within the program. This should not be a surprise, as a textual representation rarely matches up with the intuitiveness of a graphic representation.
+Still, although we were able to nicely describe our nodes and the connections between them, the resulting code is far from representing an intuitive view on the flow of data within the program. This should not be surprising. A textual representation rarely matches up with the intuitiveness of a graphic representation.
 
-But, friends of visual representations, do not despair. Rescue is around the corner! Just recently, an experimental visual Go environment has been presented to the public - [Shenzhen Go](https://google.github.io/shenzhen-go/). (Careful though - "experimental" means exactly this.)
+So where is the visual flow diagram editor, you ask?
+
+Friends of visual representations, do not despair. Rescue is around the corner! Just recently, an experimental visual Go environment has been presented to the public - [Shenzhen Go](https://google.github.io/shenzhen-go/). (Careful though - "experimental" means exactly this.)
 
 ![Shenzhen Word Counter](shenzen_word_counter.png)
 
@@ -289,15 +310,17 @@ Some nodes contain configurable standard actions, others contain Go code that re
 ![Shenzhen Print summary node](shenzen_print_summary.png)
 
 
+If you want a graphic editor now and don't want to wait until Shenzhen Go is production ready, have a look at [themalkolm/go-fbp](https://github.com/themalkolm/go-fbp). This project generates Go code from the output of a graphical FBP editor called DrawFBP (a Java app). (Disclaimer: I have tested neither `go-fbp` nor DrawFBP.)
 
-## Links
+
+## Further Links
 
 [Wikipedia: Flow-based programming](https://en.wikipedia.org/wiki/Flow-based_programming)
 
 [John Paul Morrison: FBP](http://www.jpaulmorrison.com/fbp/)
 [flowbased.org](http://flowbased.org/)
 
-[Gopheracademy: Composable Pipelines Improved](https://blog.gopheracademy.com/composable-pipelines-pattern/)
+[Gopheracademy: Patterns for composable concurrent pipelines in Go](https://blog.gopheracademy.com/composable-pipelines-pattern/)
 
 [Gopheracademy: Composable Pipelines Improved](https://blog.gopheracademy.com/advent-2015/composable-pipelines-improvements/)
 
