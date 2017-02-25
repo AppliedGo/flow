@@ -31,24 +31,24 @@ tags = ["fbp", "flow-based programming", "dataflow"]
 categories = ["Tutorial"]
 +++
 
-Flow-Based Programming is about modeling a program as data that flows between independently operating processing units. Who would not think of channels and goroutines as a natural analogy?
+In Flow-Based Programming, programs are modeled as data flowing between independent processing units. Who would not think of channels and goroutines as a natural analogy?
 
 
 <!--more-->
 
-As trivial as this may sound, all software is about processing data. Yet, when you look at code written in a "traditional" programming language, the actual data flow is not readily visible. Instead, what you mainly see are just the control structures. The actual data flow only happens to occur at runtime as a consequence from the control structures.
+As trivial as this may sound, all software is about processing data. Yet, when you look at code written in a "traditional" programming language, the actual data flow is not readily visible. Instead, what you mainly see are just the control structures. The actual data flow only happens to occur at runtime, as a consequence from the control structures.
 
 *Flow-Based Programming (FBP)* turns the view on code and data upside down. Here, the data flow is the first thing you look at; it is the main principle that defines the structure of your application. Processing of data happens within many small nodes that sit between the endpoints of data pipelines.
 
 HYPE[FBP](FBP.html)
 
-At this level, those nodes are just black boxes in a graphic flow diagram. The actual code hides within these boxes.
+At this level, the processing nodes are just black boxes in a graphic flow diagram. The actual code hides within these boxes.
 
-## FBP and concurrency
+## Flow-based programming and concurrency
 
 Looking at an FBP diagram immediately raises two thoughts.
 
-First, the data flow model is inherently concurrent. Data streams are independent of each other, and so are the nodes.
+First, the data flow model is inherently concurrent. Data streams are independent of each other, and so are the nodes. Looks like optimal separation of concerns.
 
 Second, a data flow looks darned close to channels and goroutines!
 
@@ -97,7 +97,7 @@ I also most certainly left out a few FBP libs that I failed to find in the short
 
 ## A simple FBP flow
 
-For today's code, I picked the first of the libraries above, `trustmaster/goflow`. It provides a quite readable syntax and comes with detailed documentation. (I must admit that part of the readability seems to rely on reflection, which some of you might frown upon. But it is ok as it still is a good example of using channels and goroutines for implementing FBP.)
+For today's code, I picked the first of the libraries above, `trustmaster/goflow`. It provides a quite readable syntax and comes with detailed documentation. (On the flipside, `goflow` uses quite some reflection inside, which some of you might frown upon.)
 
 Our sample code is an incarnation of the schematic FBP graph in the initial animation. Let's turn the abstract nodes and data items into someting more tangible. For example, we could feed the network with sentences and let one node count the words in each sentence and the other all letters. The final node then prints the results.
 
@@ -132,13 +132,13 @@ import (
 	"github.com/trustmaster/goflow"
 )
 
-// Our two counters send their results asynchronously to the printer. To distinguish between the outputs of the two counters, we send a name along with the count. (Yes, sending just a string would be easier but also more boring.)
+// Our two `counter` nodes (see below) send their results asynchronously to the `printer` node. To distinguish between the outputs of the two counters, we attach a tag to each count. (Yes, sending just a string including the count would be easier but also more boring. The `splitter` already sends strings, so let's try something different here.)
 type count struct {
-	kind  string
+	tag   string
 	count int
 }
 
-// Splitter receives strings and copies each one to its two output ports.
+// The `splitter` receives strings and copies each one to its two output ports.
 type splitter struct {
 	flow.Component
 
@@ -146,13 +146,13 @@ type splitter struct {
 	Out1, Out2 chan<- string
 }
 
-// OnIn dispatches the input string to the two output ports.
+// `OnIn` dispatches the input string to the two output ports.
 func (t *splitter) OnIn(s string) {
 	t.Out1 <- s
 	t.Out2 <- s
 }
 
-// WordCounter is a `goflow` component that counts the words in a string.
+// `WordCounter` is a `goflow` component that counts the words in a string.
 type wordCounter struct {
 	// Embed flow functionality.
 	flow.Component
@@ -162,13 +162,13 @@ type wordCounter struct {
 	Count chan<- *count
 }
 
-// OnSentence triggers on new input from the `Sentence` port.
+// `OnSentence` triggers on new input from the `Sentence` port.
 // It counts the number of words in the sentence.
 func (wc *wordCounter) OnSentence(sentence string) {
 	wc.Count <- &count{"Words", len(strings.Split(sentence, " "))}
 }
 
-// LetterCounter is a `goflow` component that counts the letters in a string.
+// `letterCounter` is a `goflow` component that counts the letters in a string.
 type letterCounter struct {
 	flow.Component
 	Sentence <-chan string
@@ -178,31 +178,31 @@ type letterCounter struct {
 	re *regexp.Regexp
 }
 
-// OnSentence triggers on new input from the `Sentence` port.
+// `OnSentence` triggers on new input from the `Sentence` port.
 // It counts the number of words in the sentence.
 func (lc *letterCounter) OnSentence(sentence string) {
 	lc.Count <- &count{"Letters", len(lc.re.FindAllString(sentence, -1))}
 }
 
-// An Init method allows to initialize a component. Here we use it to run
-// the expensive MustCompile method once, rather than every time OnSentence is called.
+// An `Init` method allows to initialize a component. Here we use it to run
+// the expensive `MustCompile` method once, rather than every time `OnSentence` is called.
 func (lc *letterCounter) Init() {
 	lc.re = regexp.MustCompile("[a-zA-Z]")
 }
 
-// Printer is a "sink" with no output. It prints the input
-// to the standard output.
+// A `printer` is a "sink" with no output channel. It prints the input
+// to the console.
 type printer struct {
 	flow.Component
 	Line <-chan *count // inport
 }
 
-// OnLine prints a count.
+// `OnLine` prints a count.
 func (p *printer) OnLine(c *count) {
-	fmt.Println(c.kind+":", c.count)
+	fmt.Println(c.tag+":", c.count)
 }
 
-// CounterNet represents the complete network of nodes and data pipelines.
+// `CounterNet` represents the complete network of nodes and data pipelines.
 type counterNet struct {
 	flow.Graph
 }
@@ -292,7 +292,7 @@ Words: 8
 Letters: 70
 ```
 
-The unordered output shows that the nodes are indeed running asynchronously.
+The unordered output shows that the nodes are indeed running asynchronously. Homework assignment: Add more info to the `count` struct to allow the `printer` node grouping the output by input sentence.
 
 
 ## Conclusions
@@ -301,7 +301,12 @@ Still, although we were able to nicely describe our nodes and the connections be
 
 So where is the visual flow diagram editor, you ask?
 
-Friends of visual representations, do not despair. Rescue is around the corner! Just recently, an experimental visual Go environment has been presented to the public - [Shenzhen Go](https://google.github.io/shenzhen-go/). (Careful though - "experimental" means exactly this.)
+There are indeed some options.
+
+
+### Shenzhen Go
+
+Just recently, an experimental visual Go environment has been presented to the public - [Shenzhen Go](https://google.github.io/shenzhen-go/). (Careful though - "experimental" means exactly this.)
 
 ![Shenzhen Word Counter](shenzen_word_counter.png)
 
@@ -309,6 +314,8 @@ Some nodes contain configurable standard actions, others contain Go code that re
 
 ![Shenzhen Print summary node](shenzen_print_summary.png)
 
+
+### go-fbp and DrawFBP
 
 If you want a graphic editor now and don't want to wait until Shenzhen Go is production ready, have a look at [themalkolm/go-fbp](https://github.com/themalkolm/go-fbp). This project generates Go code from the output of a graphical FBP editor called DrawFBP (a Java app). (Disclaimer: I have tested neither `go-fbp` nor DrawFBP.)
 
