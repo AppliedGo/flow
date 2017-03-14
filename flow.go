@@ -275,7 +275,7 @@ Step 1: `go get` the code. Note the `-d` flag that prevents auto-installing the 
 
 Step 2: `cd` to the source code directory.
 
-    cd $GOPATH/github.com/appliedgo/flow
+    cd $GOPATH/src/github.com/appliedgo/flow
 
 Step 3. Run the binary.
 
