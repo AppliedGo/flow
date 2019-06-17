@@ -26,9 +26,9 @@ email = "chris@appliedgo.net"
 date = "2017-02-25"
 publishdate = "2017-02-25"
 draft = "false"
-domains = ["Concurrent Programming"]
+categories = ["Concurrent Programming"]
 tags = ["fbp", "flow-based programming", "dataflow"]
-categories = ["Tutorial"]
+articletypes = ["Tutorial"]
 +++
 
 In Flow-Based Programming, programs are modeled as data flowing between independent processing units. Who would not think of channels and goroutines as a natural analogy?
