@@ -129,7 +129,7 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/trustmaster/goflow"
+	flow "github.com/trustmaster/goflow"
 )
 
 // Our two `counter` nodes (see below) send their results asynchronously to the `printer` node. To distinguish between the outputs of the two counters, we attach a tag to each count. (Yes, sending just a string including the count would be easier but also more boring. The `splitter` already sends strings, so let's try something different here.)
