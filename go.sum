@@ -1,2 +1,6 @@
-github.com/trustmaster/goflow v0.0.0-20210928125717-b7d4fd465ab2 h1:Wg/FBcKQtlJfUfOGNMugkQhHYUtlUm/GlMDCKObja7o=
-github.com/trustmaster/goflow v0.0.0-20210928125717-b7d4fd465ab2/go.mod h1:ZwcUORj/boS7D5glapIfMUA3ZxB61hWKdb672oXyJa8=
+github.com/gorilla/websocket v1.4.2 h1:+/TMaTYc4QFitKJxsQ7Yye35DkWvkdLcvGKqM+x0Ufc=
+github.com/gorilla/websocket v1.4.2/go.mod h1:YR8l580nyteQvAITg2hZ9XVh4b55+EU/adAjf1fMHhE=
+github.com/nu7hatch/gouuid v0.0.0-20131221200532-179d4d0c4d8d h1:VhgPp6v9qf9Agr/56bj7Y/xa04UccTW04VP0Qed4vnQ=
+github.com/nu7hatch/gouuid v0.0.0-20131221200532-179d4d0c4d8d/go.mod h1:YUTz3bUH2ZwIWBy3CJBeOBEugqcmXREj14T+iG/4k4U=
+github.com/trustmaster/goflow v0.0.0-20180414123758-47a1b442f390 h1:uI4vueQdQx4+1yl036LNXEMd6ZOIaDUwyv4eBjB8gxc=
+github.com/trustmaster/goflow v0.0.0-20180414123758-47a1b442f390/go.mod h1:YDtu69AUfLyNCzpKgvLnWMT0CKIK2IWKj9pH+NqKU8g=

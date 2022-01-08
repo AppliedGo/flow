@@ -279,7 +279,7 @@ Step 2: `cd` to the source code directory.
 
 Step 3. Run the binary.
 
-    go run ./flow
+    go run flow.go
 
 The output should look like:
 
@@ -334,5 +334,11 @@ If you want a graphic editor now and don't want to wait until Shenzhen Go is pro
 
 
 **Happy coding!**
+
+___
+
+Updates
+
+2022-01-08 pinned goflow to "v0" (commit 47a1b442f390) as "v1" has breaking changes
 
 */
